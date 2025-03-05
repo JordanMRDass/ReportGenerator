@@ -48,173 +48,337 @@ except ImportError:
     install("streamlit-echarts")
     from streamlit_echarts import st_echarts
 
+import re
+
+try:
+    import pyperclip
+except ImportError:
+    install("pyperclip")
+    import pyperclip
+
 # Set wide layout for Streamlit
 st.set_page_config(layout="wide")
 
-def remove_POs(df_shift_all):
-    pattern = "PO#|PO #|INC #|INC#"
-    df_filtered_bad = df_shift_all[df_shift_all['Issue'].str.contains(pattern, regex=True)]
-    df_filtered_good = df_shift_all[~df_shift_all['Issue'].str.contains(pattern, regex=True)]
 
-    return df_filtered_good, df_filtered_bad
 
-def get_file_as_dataframe(filename):
-    try:
-        df = pd.read_excel(filename, sheet_name="End Of Shift Report")
-    except:
-        print(f"Error reading worksheet = 'End Of Shift Report' from file: {filename}")
-
+def PR2PO(filepath):
+    df = pd.read_excel(filepath, sheet_name="Master Report")
     df.columns = df.iloc[0, :]
-    df_clean = df.iloc[1:, :]
+    df = df.iloc[1:, :]
 
-    df_process = df_clean.dropna(subset = ["Process"])
+    # Find all the positions of 'Status' columns
+    status_columns = [col for col in df.columns if col == 'PSS Status']
 
-    # Set Date/Month with previous information
-    df_process["Date/Month"] = df_process["Date/Month"].fillna(method='ffill')
+    # If there are exactly two such columns, rename them
+    if len(status_columns) == 2:
+        # Create a new list of column names with unique names for 'Status' columns
+        new_columns = []
+        status_count = 1
+        for col in df.columns:
+            if col == 'PSS Status':
+                if status_count == 1:
+                    new_columns.append(f'PSS Status')
+                else:
+                    new_columns.append(f'PSS Status_{status_count}')
+                status_count += 1
+            else:
+                new_columns.append(col)
 
-    df_process.columns = ["Date/Month","Pending Action","Shift1_Process","Shift1_Issue","Shift1_Action Taken","Shift2_Process","Shift2_Issue","Shift2_Action Taken","Shift3_Process","Shift3_Issue","Shift3_Action Taken","NaN"]
+        df.columns = new_columns
 
-    df_process = df_process[["Date/Month","Shift1_Process","Shift1_Issue","Shift1_Action Taken","Shift2_Process","Shift2_Issue","Shift2_Action Taken","Shift3_Process","Shift3_Issue","Shift3_Action Taken"]]
+    pr2po_processed = len(df) - len(df[df["Status"].isna()])
+    pr2po_convert_po = len(df[df["Status"] == "Convert to PO"])
+    pr2po_pss_status = len(df) - len(df[df["PSS Status"].isna()])
+    pr2po_total = len(df)
+    pr2po_error = len(df[df["Status"] == "PO Not Released"])
+    error_dataframe = df[df["Status"] == "PO Not Released"]
 
-    return df_process
+    return pr2po_processed, pr2po_convert_po, pr2po_pss_status, pr2po_total, pr2po_error, error_dataframe[["Status", 'PR#', 'PGr', 'OA#', 'Vendor#', 'PR value']]
 
-df_process = get_file_as_dataframe("90 TNB_RPAAMS_End of Shift Report & Support Guide Year 4-2024-Q4.xlsx")
+def PO_Exception(filepath):
+    df_po_exception = pd.read_excel(filepath, sheet_name = "Report")
 
-
-def seperate_shift_df(df_process):
-    df_shift1 = df_process[["Date/Month","Shift1_Process","Shift1_Issue","Shift1_Action Taken"]]
-    df_shift1.columns = ["Date/Month","Process","Issue","Action Taken"]
-    df_shift1["Date/Month"] = pd.to_datetime(df_shift1["Date/Month"])
-
-    df_shift2 = df_process[["Date/Month","Shift2_Process","Shift2_Issue","Shift2_Action Taken"]]
-    df_shift2.columns = ["Date/Month","Process","Issue","Action Taken"]
-    df_shift2["Date/Month"] = pd.to_datetime(df_shift2["Date/Month"])
-
-    df_shift3 = df_process[["Date/Month","Shift3_Process","Shift3_Issue","Shift3_Action Taken"]]
-    df_shift3.columns = ["Date/Month","Process","Issue","Action Taken"]
-    df_shift3["Date/Month"] = pd.to_datetime(df_shift3["Date/Month"])
-
-    df_shift_all = pd.concat([df_shift1, df_shift2, df_shift3], axis = 0)
-    df_shift_all["Date/Month"] = pd.to_datetime(df_shift_all["Date/Month"])
-    df_shift_all_good, df_shift_all_bad = remove_POs(df_shift_all)
-
-    return df_shift1, df_shift2, df_shift3, df_shift_all_good, df_shift_all_bad
-
-# Streamlit app title
-st.title("End Of Shift Report Analysis")
-
-# File uploader widget to upload a CSV file
-uploaded_file = st.file_uploader("Upload your End Of Shift Report file", type=["xlsx"])
-
-
-if uploaded_file is not None:
-    # Read the uploaded CSV file into a pandas DataFrame    
-    process_df = get_file_as_dataframe(uploaded_file)
-
-    df_shift1, df_shift2, df_shift3, df_shift_all, df_shift_all_bad = seperate_shift_df(process_df)
-
-    st.write(f"Removed {len(df_shift_all_bad)} Tickets from calculations, remaining: {len(df_shift_all)} issues")
-    st.dataframe(df_shift_all_bad)
-
-    if 'Process' in df_shift_all.columns:
-
-        start_date, end_date = st.date_input(
-            "Choose a date range", 
-            [df_shift_all["Date/Month"].min(), df_shift_all["Date/Month"].max()],
-            min_value = df_shift_all["Date/Month"].min(),
-            max_value= df_shift_all["Date/Month"].max()
-        )
-
-        col1, col2 = st.columns([0.5, 1.5])
-
-        start_date_str = start_date.strftime("%Y-%m-%d")  # Correct format string
-        end_date_str = end_date.strftime("%Y-%m-%d")
-
-        process_counts = df_shift_all[(df_shift_all["Date/Month"] >= pd.to_datetime(start_date)) & 
-    (df_shift_all["Date/Month"] <= pd.to_datetime(end_date))]
-
-        process_counts_to_display = process_counts.groupby(by=["Process"]).size().reset_index(name='ProcessCount')
-
-        # Display the counts in the app
-        with col1:
-            st.write("Count of each unique Process:")
-            st.dataframe(process_counts_to_display[["Process", "ProcessCount"]], use_container_width=True)  # Display the DataFrame with renamed columns
-
-        # Plot the count of 'Process' values as a bar chart
-        with col2: 
-            st.write(f"Visualizing the count of each Process, {start_date_str} - {end_date_str}:")
-
-            option = {
-            "tooltip": {
-                "trigger": 'axis',
-                "axisPointer": {      
-                "type": 'shadow'      
-                }
-            },
-            "xAxis": {
-                "type": 'category',
-                "data": list(process_counts_to_display.Process),
-                "axisLabel": {
-                "rotate": 90 
-                }
-            },
-            "yAxis": {
-                "type": 'value'
-            },
-            "series": [
-                {
-                "data": list(process_counts_to_display.ProcessCount),
-                "type": 'bar',
-                'itemStyle': {
-                'color': 'red'  # Set the color of the line to red
-            }
-                }
-            ]}
-
-            
-            clicked_label = st_echarts(option,
-            height = "500px",
-            events = {"click": "function(params) {return params.name}"})
-
-    else:
-        st.error("'Process' column not found in the uploaded data")
-
-    clicked_process = process_counts[process_counts["Process"] == clicked_label][["Date/Month","Process","Issue","Action Taken"]]
-
-    st.write(f"{clicked_label}")
-
-    process_counts_to_display = clicked_process[["Date/Month"]].groupby(by=["Date/Month"]).size().reset_index(name='ProcessCount')
-
-    option = {
-                "tooltip": {
-                    "trigger": 'axis',
-                    "axisPointer": {      
-                    "type": 'shadow'      
-                    }
-                },
-        'xAxis': {
-            'type': 'category',
-            'data': list(process_counts_to_display["Date/Month"].dt.strftime('%Y-%m-%dT%H:%M:%S'))
-        },
-        'yAxis': {
-            'type': 'value'
-        },
-        'series': [
-            {
-                'data': list(process_counts_to_display["ProcessCount"]),
-                'type': 'line',
-                'itemStyle': {
-                'color': 'red'  # Set the color of the line to red
-            }
-            }
-        ]
-    }
-
-
-    secondary_clicked_label = st_echarts(option,
-        height = "300px",
-        events = {"click": "function(params) {return params.name}"})
+    df_po_exception_processed = len(df_po_exception) - len(df_po_exception[df_po_exception["Status"].isna()])
+    df_po_exception_convert = len(df_po_exception[df_po_exception["Status"] == "Convert to PO"])
     
-    seconday_clicked_process = process_counts[(process_counts["Date/Month"] == secondary_clicked_label) & (process_counts["Process"] == clicked_label)][["Date/Month","Process","Issue","Action Taken"]]
-    st.dataframe(seconday_clicked_process, use_container_width = True)
+    return df_po_exception_convert, df_po_exception_processed, len(df_po_exception)
 
+def Reaward_PO(filepath):
+    df_po_exception = pd.read_excel(filepath, sheet_name = "Report")
+
+    df_po_exception.columns = df_po_exception.iloc[0,:]
+    df_po_exception = df_po_exception.iloc[1:, :]
+    df_UC57_convert = len(df_po_exception[df_po_exception["Status"] == "Completed"])
+    df_UC57_manual = len(df_po_exception[df_po_exception["Status"] != ""])
+    df_UC57_except = len(df_po_exception[df_po_exception["Status"] == "PR Exceptioned"])
+    df_UC57_total = len(df_po_exception)
+
+    return df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except
+                
+def Vendor(filepath):
+    df2 = pd.read_excel(filepath, sheet_name="Report")
+
+    vendor_processed = len(df2) - len(df2[df2["Status"].isna()])
+    vendor_convert_po = len(df2[df2["Status"] == "Convert to PO"])
+    vendor_total = len(df2)
+
+    return vendor_processed, vendor_convert_po, vendor_total
+
+
+
+col1, col2 = st.columns([0.5, 1.5])
+
+with col1:
+    st.markdown("### Drop Files")
+    uploaded_file_list = st.file_uploader("Upload Reports", type=["xlsx", "xlsm"], accept_multiple_files = True)
+
+with col2:
+    if uploaded_file_list is not None:
+        for uploaded_file in uploaded_file_list:
+            if re.findall("PR to PO", uploaded_file.name):
+                st.write(uploaded_file.name)
+                PR2PO_df, PR2PO_button, PR2PO_graph = st.columns([1, 0.3, 1])
+                pr2po_processed, pr2po_convert_po, pr2po_pss_status, pr2po_total, pr2po_error, error_dataframe = PR2PO(uploaded_file)
+                
+                with PR2PO_df:
+                    # Create DataFrame for PR2PO
+                    df_pr2po = pd.DataFrame({
+                        "PR2PO Processed": [pr2po_processed],
+                        "PR2PO Convert to PO": [pr2po_convert_po],
+                        "PSS Status": [pr2po_pss_status],
+                        "PR2PO Total": [pr2po_total],
+                        "PR2PO Error": [pr2po_error]
+                    })
+                    st.dataframe(df_pr2po.set_index(df_pr2po.columns[0]))
+
+                    st.write(f"{pr2po_error} Errors Found")
+                    st.dataframe(error_dataframe, use_container_width= True)
+
+                with PR2PO_graph:
+                    df_T = df_pr2po.T.reset_index()
+                    df_T.columns = ["Category", "Value"]
+
+                    option = {
+                        "tooltip": {
+                            "trigger": 'axis',
+                            "axisPointer": {      
+                            "type": 'shadow'      
+                            }
+                        },
+                        "xAxis": {
+                            "type": 'category',
+                            "data": list(df_T[df_T.columns[0]]),
+                            "axisLabel": {
+                            "rotate": 90 
+                            }
+                        },
+                        "yAxis": {
+                            "type": 'value'
+                        },
+                        "series": [
+                            {
+                            "data": list(df_T[df_T.columns[1]]),
+                            "type": 'bar',
+                            'itemStyle': {
+                            'color': 'red'  # Set the color of the line to red
+                        }
+                            }
+                        ]}
+                    
+                    st_echarts(option, height = "400px")
+
+                with PR2PO_button:
+                    if st.button("Copy PR2PO"):
+                        # Flatten the DataFrame to a single row (list of values)
+                        flattened_values = df_pr2po.drop(columns = ["PR2PO Error"]).values.flatten()
+
+                        # Convert the flattened values to a tab-separated string
+                        df_str = '\t'.join(map(str, flattened_values))
+
+                        # Copy the string to clipboard
+                        pyperclip.copy(df_str)
+
+                st.write("____")
+
+            elif re.findall("PO Exception Report", uploaded_file.name):
+                st.write(uploaded_file.name)
+                PO_df, PO_button, PO_graph = st.columns([1, 0.3, 1])
+                with PO_df:
+                    df_po_exception_convert, df_po_exception_processed, df_po_exception_total = PO_Exception(uploaded_file)
+                    
+                    # Create DataFrame for PO Exception
+                    df_po_exception = pd.DataFrame({
+                        "PO Exception Processed": [df_po_exception_processed],
+                        "PO Exception Convert": [df_po_exception_convert],
+                        "PO Exception Total": [df_po_exception_total]
+                    })
+                    st.dataframe(df_po_exception.set_index(df_po_exception.columns[0]), use_container_width=True)
+
+                with PO_graph:
+                    df_T = df_po_exception.T.reset_index()
+                    df_T.columns = ["Category", "Value"]
+
+                    option = {
+                        "tooltip": {
+                            "trigger": 'axis',
+                            "axisPointer": {      
+                            "type": 'shadow'      
+                            }
+                        },
+                        "xAxis": {
+                            "type": 'category',
+                            "data": list(df_T[df_T.columns[0]]),
+                            "axisLabel": {
+                            "rotate": 90 
+                            }
+                        },
+                        "yAxis": {
+                            "type": 'value'
+                        },
+                        "series": [
+                            {
+                            "data": list(df_T[df_T.columns[1]]),
+                            "type": 'bar',
+                            'itemStyle': {
+                            'color': 'red'  # Set the color of the line to red
+                        }
+                            }
+                        ]}
+                    
+                    st_echarts(option, height = "400px")
+
+                with PO_button:
+                    if st.button("Copy PO Exception"):
+                        # Flatten the DataFrame to a single row (list of values)
+                        flattened_values = df_po_exception.values.flatten()
+
+                        # Convert the flattened values to a tab-separated string
+                        df_str = '\t'.join(map(str, flattened_values))
+
+                        # Copy the string to clipboard
+                        pyperclip.copy(df_str)
+
+                st.write("____")
+
+            elif re.findall("PO Reassignment", uploaded_file.name):
+                st.write(uploaded_file.name)
+                UC57_df, UC57_button, UC57_graph = st.columns([1, 0.3, 1])
+
+                with UC57_df:
+                    df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except = Reaward_PO(uploaded_file)
+                    
+                    # Create DataFrame for Reaward PO
+                    df_reaward_po = pd.DataFrame({
+                        "Reaward PO Manual": [df_UC57_manual],
+                        "Reaward PO Convert": [df_UC57_convert],
+                        "Reaward PO Total": [df_UC57_total],
+                        "Reaward PO Exception": [df_UC57_except]
+                    })
+                    st.dataframe(df_reaward_po.set_index(df_reaward_po.columns[0]), use_container_width=True)
+
+                with UC57_graph:
+                    df_T = df_reaward_po.T.reset_index()
+                    df_T.columns = ["Category", "Value"]
+
+                    option = {
+                        "tooltip": {
+                            "trigger": 'axis',
+                            "axisPointer": {      
+                            "type": 'shadow'      
+                            }
+                        },
+                        "xAxis": {
+                            "type": 'category',
+                            "data": list(df_T[df_T.columns[0]]),
+                            "axisLabel": {
+                            "rotate": 90 
+                            }
+                        },
+                        "yAxis": {
+                            "type": 'value'
+                        },
+                        "series": [
+                            {
+                            "data": list(df_T[df_T.columns[1]]),
+                            "type": 'bar',
+                            'itemStyle': {
+                            'color': 'red'  # Set the color of the line to red
+                        }
+                            }
+                        ]}
+                    
+                    st_echarts(option, height = "400px")
+
+                with UC57_button:
+                    if st.button("Copy Reaward PO"):
+                        # Flatten the DataFrame to a single row (list of values)
+                        flattened_values = df_reaward_po.values.flatten()
+
+                        # Convert the flattened values to a tab-separated string
+                        df_str = '\t'.join(map(str, flattened_values))
+
+                        # Copy the string to clipboard
+                        pyperclip.copy(df_str)
+
+                st.write("____")
+
+            elif re.findall("Vendor", uploaded_file.name):
+                st.write(uploaded_file.name)
+                vendor_df, vendor_button, vendor_graph = st.columns([1, 0.3, 1])
+
+                with vendor_df:
+                    vendor_processed, vendor_convert_po, vendor_total = Vendor(uploaded_file)
+                    
+                    # Create DataFrame for Vendor
+                    df_vendor = pd.DataFrame({
+                        "Vendor Processed": [vendor_processed],
+                        "Vendor Convert to PO": [vendor_convert_po],
+                        "Vendor Total": [vendor_total]
+                    })
+                    st.dataframe(df_vendor.set_index(df_vendor.columns[0]), use_container_width=True)
+
+                with vendor_graph:
+                    df_T = df_vendor.T.reset_index()
+                    df_T.columns = ["Category", "Value"]
+
+                    option = {
+                        "tooltip": {
+                            "trigger": 'axis',
+                            "axisPointer": {      
+                            "type": 'shadow'      
+                            }
+                        },
+                        "xAxis": {
+                            "type": 'category',
+                            "data": list(df_T[df_T.columns[0]]),
+                            "axisLabel": {
+                            "rotate": 90 
+                            }
+                        },
+                        "yAxis": {
+                            "type": 'value'
+                        },
+                        "series": [
+                            {
+                            "data": list(df_T[df_T.columns[1]]),
+                            "type": 'bar',
+                            'itemStyle': {
+                            'color': 'red'  # Set the color of the line to red
+                        }
+                            }
+                        ]}
+                    
+                    st_echarts(option, height = "400px")
+
+                with vendor_button:
+                    if st.button("Copy Vendor Rotation"):
+                        # Flatten the DataFrame to a single row (list of values)
+                        flattened_values = df_vendor.values.flatten()
+
+                        # Convert the flattened values to a tab-separated string
+                        df_str = '\t'.join(map(str, flattened_values))
+
+                        # Copy the string to clipboard
+                        pyperclip.copy(df_str)
+                
+                st.write("____")
