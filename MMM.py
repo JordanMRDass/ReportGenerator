@@ -240,7 +240,7 @@ with col2:
                             "data": list(df_T[df_T.columns[1]]),
                             "type": 'bar',
                             'itemStyle': {
-                            'color': 'red'  # Set the color of the line to red
+                            'color': 'blue'  # Set the color of the line to red
                         }
                             }
                         ]}
@@ -302,7 +302,7 @@ with col2:
                             "data": list(df_T[df_T.columns[1]]),
                             "type": 'bar',
                             'itemStyle': {
-                            'color': 'red'  # Set the color of the line to red
+                            'color': 'orange'  # Set the color of the line to red
                         }
                             }
                         ]}
@@ -363,7 +363,7 @@ with col2:
                             "data": list(df_T[df_T.columns[1]]),
                             "type": 'bar',
                             'itemStyle': {
-                            'color': 'red'  # Set the color of the line to red
+                            'color': 'purple'  # Set the color of the line to red
                         }
                             }
                         ]}
