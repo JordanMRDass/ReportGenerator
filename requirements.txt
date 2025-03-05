@@ -5,4 +5,3 @@ altair
 streamlit-echarts
 pyperclip
 openpyxl
-tempfile
