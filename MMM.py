@@ -137,7 +137,7 @@ with col2:
         for uploaded_file in uploaded_file_list:
             if re.findall("PR to PO", uploaded_file.name):
                 st.write(uploaded_file.name)
-                PR2PO_df, PR2PO_button, PR2PO_graph = st.columns([1, 0.3, 1])
+                PR2PO_df, PR2PO_graph = st.columns([1, 1])
                 pr2po_processed, pr2po_convert_po, pr2po_pss_status, pr2po_total, pr2po_error, error_dataframe = PR2PO(uploaded_file)
                 
                 with PR2PO_df:
@@ -191,7 +191,7 @@ with col2:
 
             elif re.findall("PO Exception Report", uploaded_file.name):
                 st.write(uploaded_file.name)
-                PO_df, PO_button, PO_graph = st.columns([1, 0.3, 1])
+                PO_df, PO_graph = st.columns([1, 1])
                 with PO_df:
                     df_po_exception_convert, df_po_exception_processed, df_po_exception_total = PO_Exception(uploaded_file)
                     
@@ -240,7 +240,7 @@ with col2:
 
             elif re.findall("PO Reassignment", uploaded_file.name):
                 st.write(uploaded_file.name)
-                UC57_df, UC57_button, UC57_graph = st.columns([1, 0.3, 1])
+                UC57_df, UC57_graph = st.columns([1, 1])
 
                 with UC57_df:
                     df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except = Reaward_PO(uploaded_file)
@@ -291,7 +291,7 @@ with col2:
 
             elif re.findall("Vendor", uploaded_file.name):
                 st.write(uploaded_file.name)
-                vendor_df, vendor_button, vendor_graph = st.columns([1, 0.3, 1])
+                vendor_df, vendor_graph = st.columns([1, 1])
 
                 with vendor_df:
                     vendor_processed, vendor_convert_po, vendor_total = Vendor(uploaded_file)
