@@ -187,32 +187,6 @@ with col2:
                     
                     st_echarts(option, height = "400px")
 
-                with PR2PO_button:
-                    if st.button("Copy PR2PO"):
-                        # Flatten the DataFrame to a single row (list of values)
-                        flattened_values = df_pr2po.drop(columns = ["PR2PO Error"]).values.flatten()
-
-                        # Convert the flattened values to a tab-separated string
-                        df_str = '\t'.join(map(str, flattened_values))
-
-                        # Copy the string to clipboard
-                        # JavaScript to copy text to clipboard
-                        copy_to_clipboard_script = f"""
-                        <script>
-                        function copyToClipboard() {{
-                            var text = `{df_str}`;
-                            navigator.clipboard.writeText(text).then(function() {{
-                                alert('Text copied to clipboard!');
-                            }}, function(err) {{
-                                alert('Error copying text: ' + err);
-                            }});
-                        }}
-                        </script>
-                        <button onclick="copyToClipboard()">Copy to Clipboard</button>
-                        """
-                        
-                        st.markdown(copy_to_clipboard_script, unsafe_allow_html=True)
-
                 st.write("____")
 
             elif re.findall("PO Exception Report", uploaded_file.name):
@@ -261,17 +235,6 @@ with col2:
                         ]}
                     
                     st_echarts(option, height = "400px")
-
-                with PO_button:
-                    if st.button("Copy PO Exception"):
-                        # Flatten the DataFrame to a single row (list of values)
-                        flattened_values = df_po_exception.values.flatten()
-
-                        # Convert the flattened values to a tab-separated string
-                        df_str = '\t'.join(map(str, flattened_values))
-
-                        # Copy the string to clipboard
-                        pyperclip.copy(df_str)
 
                 st.write("____")
 
@@ -324,17 +287,6 @@ with col2:
                     
                     st_echarts(option, height = "400px")
 
-                with UC57_button:
-                    if st.button("Copy Reaward PO"):
-                        # Flatten the DataFrame to a single row (list of values)
-                        flattened_values = df_reaward_po.values.flatten()
-
-                        # Convert the flattened values to a tab-separated string
-                        df_str = '\t'.join(map(str, flattened_values))
-
-                        # Copy the string to clipboard
-                        pyperclip.copy(df_str)
-
                 st.write("____")
 
             elif re.findall("Vendor", uploaded_file.name):
@@ -384,16 +336,5 @@ with col2:
                         ]}
                     
                     st_echarts(option, height = "400px")
-
-                with vendor_button:
-                    if st.button("Copy Vendor Rotation"):
-                        # Flatten the DataFrame to a single row (list of values)
-                        flattened_values = df_vendor.values.flatten()
-
-                        # Convert the flattened values to a tab-separated string
-                        df_str = '\t'.join(map(str, flattened_values))
-
-                        # Copy the string to clipboard
-                        pyperclip.copy(df_str)
                 
                 st.write("____")
