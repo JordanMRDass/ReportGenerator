@@ -196,7 +196,22 @@ with col2:
                         df_str = '\t'.join(map(str, flattened_values))
 
                         # Copy the string to clipboard
-                        pyperclip.copy(df_str)
+                        # JavaScript to copy text to clipboard
+                        copy_to_clipboard_script = f"""
+                        <script>
+                        function copyToClipboard() {{
+                            var text = `{df_str}`;
+                            navigator.clipboard.writeText(text).then(function() {{
+                                alert('Text copied to clipboard!');
+                            }}, function(err) {{
+                                alert('Error copying text: ' + err);
+                            }});
+                        }}
+                        </script>
+                        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+                        """
+                        
+                        st.markdown(copy_to_clipboard_script, unsafe_allow_html=True)
 
                 st.write("____")
 
