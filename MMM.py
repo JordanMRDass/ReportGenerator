@@ -255,7 +255,7 @@ with col2:
                     })
                     st.dataframe(df_reaward_po.set_index(df_reaward_po.columns[0]), use_container_width=True)
 
-                    st.write(f"{Reaward PO Exception} Errors Found")
+                    st.write(f"{df_UC57_except} Errors Found")
                     st.dataframe(df_UC57_error_table, use_container_width= True)
 
                 with UC57_graph:
