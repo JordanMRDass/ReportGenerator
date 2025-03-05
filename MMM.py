@@ -112,7 +112,7 @@ def Reaward_PO(filepath):
     df_UC57_manual = len(df_po_exception[df_po_exception["Status"] != ""])
     df_UC57_except = len(df_po_exception[df_po_exception["Status"] == "PR Exceptioned"])
     df_UC57_total = len(df_po_exception)
-    df_uc57_error_table = df_po_exception[df_po_exception["Status"] == "PR Exceptioned"])
+    df_uc57_error_table = df_po_exception[df_po_exception["Status"] == "PR Exceptioned"]
 
     return df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except, df_uc57_error_table
                 
