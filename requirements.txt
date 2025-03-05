@@ -3,4 +3,6 @@ pandas
 matplotlib
 altair
 streamlit-echarts
+pyperclip
 openpyxl
+re
