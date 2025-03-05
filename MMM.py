@@ -112,8 +112,9 @@ def Reaward_PO(filepath):
     df_UC57_manual = len(df_po_exception[df_po_exception["Status"] != ""])
     df_UC57_except = len(df_po_exception[df_po_exception["Status"] == "PR Exceptioned"])
     df_UC57_total = len(df_po_exception)
+    df_uc57_error_table = df_po_exception[df_po_exception["Status"] == "PR Exceptioned"])
 
-    return df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except
+    return df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except, df_uc57_error_table
                 
 def Vendor(filepath):
     df2 = pd.read_excel(filepath, sheet_name="Report")
@@ -243,7 +244,7 @@ with col2:
                 UC57_df, UC57_graph = st.columns([1, 1])
 
                 with UC57_df:
-                    df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except = Reaward_PO(uploaded_file)
+                    df_UC57_manual, df_UC57_convert, df_UC57_total, df_UC57_except, df_UC57_error_table = Reaward_PO(uploaded_file)
                     
                     # Create DataFrame for Reaward PO
                     df_reaward_po = pd.DataFrame({
@@ -253,6 +254,9 @@ with col2:
                         "Reaward PO Exception": [df_UC57_except]
                     })
                     st.dataframe(df_reaward_po.set_index(df_reaward_po.columns[0]), use_container_width=True)
+
+                    st.write(f"{Reaward PO Exception} Errors Found")
+                    st.dataframe(df_UC57_error_table, use_container_width= True)
 
                 with UC57_graph:
                     df_T = df_reaward_po.T.reset_index()
