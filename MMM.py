@@ -152,8 +152,9 @@ with col2:
                     })
                     st.dataframe(df_pr2po.set_index(df_pr2po.columns[0]))
 
-                    st.write(f"{pr2po_error} Errors Found")
-                    st.dataframe(error_dataframe, use_container_width= True)
+                    if pr2po_error != 0:
+                        st.write(f"{pr2po_error} Errors Found")
+                        st.dataframe(error_dataframe, use_container_width= True)
 
                 with PR2PO_graph:
                     df_T = df_pr2po.T.reset_index()
@@ -255,8 +256,9 @@ with col2:
                     })
                     st.dataframe(df_reaward_po.set_index(df_reaward_po.columns[0]), use_container_width=True)
 
-                    st.write(f"{df_UC57_except} Errors Found")
-                    st.dataframe(df_UC57_error_table, use_container_width= True)
+                    if df_UC57_except != 0:
+                        st.write(f"{df_UC57_except} Errors Found")
+                        st.dataframe(df_UC57_error_table, use_container_width= True)
 
                 with UC57_graph:
                     df_T = df_reaward_po.T.reset_index()
