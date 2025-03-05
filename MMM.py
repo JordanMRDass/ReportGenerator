@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import tempfile
 
 # Function to install missing packages
 def install(package):
@@ -136,6 +137,22 @@ with col1:
 with col2:
     if uploaded_file_list is not None:
         for uploaded_file in uploaded_file_list:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                temp_file_path = tmp_file.name
+            
+            # Get the last modified time (mod time)
+            mod_time = os.path.getmtime(temp_file_path)
+            
+            # Convert mod_time to a readable format
+            import datetime
+            mod_time_str = datetime.datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+            
+            st.write(f"File last modified on: {mod_time_str}")
+            
+            # Optionally delete the temporary file if needed
+            os.remove(temp_file_path)
+            
             if re.findall("PR to PO", uploaded_file.name):
                 st.write(uploaded_file.name)
                 PR2PO_df, PR2PO_graph = st.columns([1, 1])
