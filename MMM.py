@@ -124,8 +124,10 @@ def Vendor(filepath):
     vendor_processed = len(df2) - len(df2[df2["Status"].isna()])
     vendor_convert_po = len(df2[df2["Status"] == "Convert to PO"])
     vendor_total = len(df2)
+    vendor_error = len(df2[df2["Status"] == "PO Created, Not Released"])
+    vendor_error_table = df2[df2["Status"] == "PO Created, Not Released"]
 
-    return vendor_processed, vendor_convert_po, vendor_total
+    return vendor_processed, vendor_convert_po, vendor_total, vendor_error, vendor_error_table
 
 
 
@@ -302,15 +304,20 @@ with col2:
                 vendor_df, vendor_graph = st.columns([1, 1])
         
                 with vendor_df:
-                    vendor_processed, vendor_convert_po, vendor_total = Vendor(uploaded_file)
+                    vendor_processed, vendor_convert_po, vendor_total, vendor_error, vendor_error_table = Vendor(uploaded_file)
                     
                     # Create DataFrame for Vendor
                     df_vendor = pd.DataFrame({
                         "Vendor Processed": [vendor_processed],
                         "Vendor Convert to PO": [vendor_convert_po],
-                        "Vendor Total": [vendor_total]
+                        "Vendor Total": [vendor_total],
+                        "Vendor Error": [vendor_error]
                     })
                     st.dataframe(df_vendor.set_index(df_vendor.columns[0]), use_container_width=True)
+
+                    if vendor_error != 0:
+                        st.write(f"{vendor_error} Errors Found")
+                        st.dataframe(vendor_error_table[["PR #", "OA #", "PO #", "Status", "Status Details"]], use_container_width= True)
         
                 with vendor_graph:
                     df_T = df_vendor.T.reset_index()
