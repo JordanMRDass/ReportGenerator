@@ -134,7 +134,7 @@ def Vendor(filepath):
 col1, col2 = st.columns([0.5, 1.5])
 
 with col1:
-    st.markdown("### Drop Files")
+    st.markdown("### Drop Files v2")
     uploaded_file_list = st.file_uploader("Upload Reports", type=["xlsx", "xlsm"], accept_multiple_files = True)
 
 with col2:  
